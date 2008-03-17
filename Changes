@@ -1,5 +1,9 @@
 Revision history for Perl extension VS::Chart.
 
+0.03  2008-03-17
+    - Fixed version dependency for Cairo since apparently set_dash(cr, offset, ...) wasn't available
+      in pre-1.040 versions. (cpan-testers by Taro Nishino)
+      
 0.02  2008-03-17
     - Added line_dash option to chart and individual datasets.
     - Fixed documentation typos

@@ -10,7 +10,7 @@ use Scalar::Util qw(refaddr);
 use VS::Chart::Dataset;
 use VS::Chart::RowIterator;
 
-our $VERSION = "0.02";
+our $VERSION = "0.03";
 
 my %Datasets;
 my %NextRow;

@@ -6,7 +6,7 @@ WriteMakefile(
     VERSION_FROM      => 'lib/VS/Chart.pm',
     PREREQ_PM         => {
         Date::Simple    => "0",
-        Cairo           => "0",
+        Cairo           => "1.040",
         List::MoreUtils => "0",
         Test::Exception => "0",
         Scalar::Util    => "0",
