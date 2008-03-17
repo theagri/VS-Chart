@@ -128,7 +128,8 @@ VS::Chart::Color - Solid colors
 
 =over 4
 
-=item new ( RED, GREEN, BLUE [, ALPHA ]);
+=item new ( RED, GREEN, BLUE [, ALPHA ])
+
 =item new ( HEX )
 
 Creates a new instance with the color specified by either specifiying each component. Components should normally be 

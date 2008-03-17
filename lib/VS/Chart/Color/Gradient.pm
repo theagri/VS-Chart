@@ -24,7 +24,7 @@ __END__
 
 =head1 NAME
 
-VS::Chart:Color::Gradient - A gradient color.
+VS::Chart::Color::Gradient - A gradient color.
 
 =head1 DESCRIPTION
 

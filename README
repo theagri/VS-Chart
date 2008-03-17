@@ -2,14 +2,14 @@ NAME
     VS::Chart - Simple module to create beautifully looking charts
 
 SYNOPSIS
-      use VS::Chart;
-      
-  my $chart = VS::Chart->new;
+     use VS::Chart;
 
-      .. Add data to $chart here ...
-      $chart->add(@row);
-      
-  $chart->render( type => "line", as => "png", to => "my_chart.png" );
+     my $chart = VS::Chart->new;
+
+     .. Add data to $chart here ...
+     $chart->add(@row);
+
+     $chart->render( type => "line", as => "png", to => "my_chart.png" );
 
 PHILOSOPHY
     *   Simple interface
@@ -23,10 +23,10 @@ PHILOSOPHY
 DESCRIPTION
     This module produces charts from data. Such charts might be line, pie
     and boxes. Currently only linecharts are implemented. The renderer uses
-    Cairo Graphics (<http://www.cairographics/>) which is a graphics library
-    for creating vector graphics to produce crips and correct output.
-    Currently, we limit output support to PNG, PDF and SVG altho Cairo may
-    support more.
+    Cairo Graphics (<http://www.cairographics/>), a graphics library for
+    creating vector graphics, to produce crisp and correct output. Currently
+    we limit output support to PNG, PDF and SVG altho Cairo may support
+    more.
 
 INTERFACE
   CLASS METHODS
@@ -40,7 +40,9 @@ INTERFACE
 
   INSTANCE METHODS
     set ( %ATTRIBUTES )
-        Sets a number of attributes.
+        Sets a number of attributes. It is possible to set an attribute for
+        a specific dataset by prepending the key with <column<gt>:. Columns
+        starts at 0.
 
     get ( ATTRIBUTE )
         Get the value of an attribute.
@@ -58,6 +60,11 @@ INTERFACE
         the output as *PATH*. By default the *FORMAT* is png but pdf or svg
         may be used instead.
 
+    dataset ( COLUMN )
+        Returns the "VS::Chart::Dataset"-instance representing the data for
+        the given column. Return undef if no such column has been added yet
+        via add.
+
 BUGS AND LIMITATIONS
     Please report any bugs or feature requests to
     "bug-vs-chart@rt.cpan.org", or through the web interface at
@@ -71,7 +78,7 @@ AUTHOR
     Claes Jakobsson, Versed Solutions "<claesjac@cpan.org>"
 
 LICENCE AND COPYRIGHT
-    Copyright (c) 2007, Versed Solutions "<info@versed.se>". All rights
+    Copyright (c) 2007-2008, Versed Solutions "<info@versed.se>". All rights
     reserved.
 
     This software is released under the MIT license cited below.

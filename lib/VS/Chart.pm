@@ -10,7 +10,7 @@ use Scalar::Util qw(refaddr);
 use VS::Chart::Dataset;
 use VS::Chart::RowIterator;
 
-our $VERSION = "0.01";
+our $VERSION = "0.02";
 
 my %Datasets;
 my %NextRow;
@@ -71,14 +71,28 @@ sub set {
             $self->{_max} = $value if $value > $max;        
             next;
         }
-        
         elsif ($key eq 'y_grid_steps') {
             $value = 1 if $value < 1;
             $value = 10 if $value > 10;
         }
     
-        $self->{$key} = $value;
+        if ($key =~ /^(\d+)\s*:\s*(.*)$/) {
+            my $id = $1;
+            $key = $2;
+            my $ds = $self->_dataset($id);
+            if (defined $ds) {
+                $ds->set($key => $value);
+            }
+        }
+        else {
+            $self->{$key} = $value;            
+        }
     }
+}
+
+sub dataset {
+    my ($self, $id) = @_;
+    return $self->_dataset($id, 0);
 }
 
 sub _dataset {
@@ -313,14 +327,14 @@ VS::Chart - Simple module to create beautifully looking charts
 
 =head1 SYNOPSIS
 
-  use VS::Chart;
-  
-  my $chart = VS::Chart->new;
+ use VS::Chart;
 
-  .. Add data to $chart here ...
-  $chart->add(@row);
-  
-  $chart->render( type => "line", as => "png", to => "my_chart.png" );
+ my $chart = VS::Chart->new;
+
+ .. Add data to $chart here ...
+ $chart->add(@row);
+
+ $chart->render( type => "line", as => "png", to => "my_chart.png" );
 
 =head1 PHILOSOPHY
 
@@ -347,8 +361,8 @@ Extendable implementation
 =head1 DESCRIPTION
 
 This module produces charts from data. Such charts might be line, pie and boxes. Currently only 
-linecharts are implemented. The renderer uses Cairo Graphics (L<http://www.cairographics/>) which is a
-graphics library for creating vector graphics to produce crips and correct output. Currently, 
+linecharts are implemented. The renderer uses Cairo Graphics (L<http://www.cairographics/>), a
+graphics library for creating vector graphics, to produce crisp and correct output. Currently 
 we limit output support to PNG, PDF and SVG altho Cairo may support more.
 
 =head1 INTERFACE
@@ -375,7 +389,8 @@ Returns a list of supported renderers.
 
 =item set ( %ATTRIBUTES )
 
-Sets a number of attributes.
+Sets a number of attributes. It is possible to set an attribute for a specific dataset by prepending the key 
+with E<lt>column<gt>:. Columns starts at 0.
 
 =item get ( ATTRIBUTE )
 
@@ -396,6 +411,11 @@ Renders the chart using the renderer specified by I<TYPE> and saves the
 output as I<PATH>. By default the I<FORMAT> is B<png> but B<pdf> or B<svg> may
 be used instead.
 
+=item dataset ( COLUMN )
+
+Returns the C<VS::Chart::Dataset>-instance representing the data for the given column. Return undef 
+if no such column has been added yet via add.
+
 =back
 
 =head1 BUGS AND LIMITATIONS
@@ -413,7 +433,7 @@ Claes Jakobsson, Versed Solutions C<< <claesjac@cpan.org> >>
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2007, Versed Solutions C<< <info@versed.se> >>. All rights reserved.
+Copyright (c) 2007-2008, Versed Solutions C<< <info@versed.se> >>. All rights reserved.
 
 This software is released under the MIT license cited below.
 

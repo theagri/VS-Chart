@@ -35,6 +35,8 @@ sub render_datasets {
     
     $cx->set_line_width(abs($chart->get("line_width") || 4));
 
+    my $g_line_dash = $chart->get("line_dash") || 0;
+    
     my $ds = 0;
 
     my $iter = $chart->_row_iterator();
@@ -42,6 +44,19 @@ sub render_datasets {
 
     my $i = 0;
     for my $dataset (@{$chart->_datasets}) {
+        my $line_dash = $dataset->get("line_dash");
+        if ($line_dash) {
+            $cx->set_dash(0, $line_dash);
+        }
+        else {
+            if ($g_line_dash) {
+                $cx->set_dash(0, $g_line_dash);
+            }
+            else {
+                $cx->set_dash(0);
+            }
+        }
+        
         $ds++;
         next if $chart->get("x_column") && $chart->get("x_column") == $ds;
         my $color = $dataset->get("color");
@@ -84,6 +99,10 @@ This class implements a standard line chart.
 =item line_width
 
 The width of the line to draw. Defaults to 4 points.
+
+=item line_dash
+
+Sets the dash length for the line. Defaults to 0 (no dash). Can also be set on a specific dataset.
 
 =back
 

@@ -15,4 +15,6 @@ for (0..99) {
     $chart->add(@v);
 }
 
+$chart->_dataset(0)->set("line_dash" => 5);
+
 $chart->render(type => 'line', as => 'png', to => 'lines.png');
