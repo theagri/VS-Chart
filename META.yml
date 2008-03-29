@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                VS-Chart
-version:             0.03
+version:             0.04
 abstract:            Simple module to create beautifully looking charts
 license:             mit
 author:              
@@ -12,6 +12,7 @@ requires:
     Date::Simple:                  0
     List::MoreUtils:               0
     List::Util:                    0
+    Module::Pluggable:             0
     Scalar::Util:                  0
     Test::Exception:               0
 meta-spec:

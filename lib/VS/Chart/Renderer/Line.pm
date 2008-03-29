@@ -17,8 +17,8 @@ sub render {
 sub render_datasets {
     my ($self, $chart, $surface) = @_;
     
-    my $rows = $chart->_rows - 1;
-    return unless $rows;
+    my $rows = $chart->rows - 1;
+    return if $rows < 1;
     
     my ($xl, $xr) = $self->x_offsets($chart, $surface);
     my ($yt, $yb) = $self->y_offsets($chart, $surface);

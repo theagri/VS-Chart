@@ -10,7 +10,7 @@ use Scalar::Util qw(refaddr);
 use VS::Chart::Dataset;
 use VS::Chart::RowIterator;
 
-our $VERSION = "0.03";
+our $VERSION = "0.04";
 
 my %Datasets;
 my %NextRow;
@@ -111,7 +111,7 @@ sub _datasets {
     return $Datasets{refaddr $self};
 };
 
-sub _rows {
+sub rows {
     my ($self) = @_;
     
     return $NextRow{refaddr $self};
@@ -127,7 +127,7 @@ sub add {
 
     $self->_clear_cache;
     
-    my $row = $self->_rows;
+    my $row = $self->rows;
 
     if (ref $data[0]) {
         $self->set(x_column => 1);
@@ -210,7 +210,7 @@ sub _row_iterator {
     if ($x_column) {
         return VS::Chart::RowIterator->new($self->_dataset(0)->data);
     }
-    return VS::Chart::RowIterator->new([1..$self->_rows]);
+    return VS::Chart::RowIterator->new([1..$self->rows]);
 }
 
 sub _offset {
@@ -415,6 +415,10 @@ be used instead.
 
 Returns the C<VS::Chart::Dataset>-instance representing the data for the given column. Return undef 
 if no such column has been added yet via add.
+
+=item rows
+
+Returns the number of rows of data added to the chart.
 
 =back
 

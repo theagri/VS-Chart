@@ -36,7 +36,7 @@ sub new {
     if (@_ == 4) {
         my @colors = map { defined $_ ? $_ : 0 } @_;
         if (any { $_ > 1 } @colors ) {
-            @colors = map { $_ / 255 } @colors
+            @colors = map { $_ / 255 } @colors;
         }
         my $self = bless \@colors, $pkg;
         return $self;
@@ -53,11 +53,11 @@ sub set {
 sub get {
     my ($pkg, $spec, $default) = @_;
 
-    return color($default) unless defined $spec;
+    return $pkg->color($default) unless defined $spec;
     return $spec if blessed $spec && $spec->isa("VS::Chart::Color");
     return $pkg->new(@$spec) if ref $spec eq 'ARRAY';
-    return color($default) if $spec eq '1';
-    return color($spec) if $spec =~ /^\w+$/;
+    return $pkg->color($default) if $spec eq '1';
+    return $pkg->color($spec) if $spec =~ /^\w+$/;
     
      my $color;
      eval {
@@ -107,12 +107,17 @@ BEGIN {
     }
     
     sub color {
-        my ($name) = @_;
+        my ($pkg, $name) = @_;
     
         return $name if blessed $name && $name->isa("VS::Chart::Color");
         return $Colors{$name} if exists $Colors{$name};
         return $Colors{black};
     }
+}
+
+sub as_hex {
+    my $self = shift;
+    return sprintf("#%02x%02x%02x", map { int($_ * 255) } @{$self}[0..2]);
 }
 
 1;
@@ -194,6 +199,11 @@ be handled correctly or are 1.
 =item set ( CONTEXT )
 
 Sets the color to be the corrent drawing color for I<CONTEXT>.
+
+=item as_hex 
+
+Returns the color as a hexadecimal formated string suitable for using in CSS. Returned string is 
+prefixed with #.
 
 =back
 

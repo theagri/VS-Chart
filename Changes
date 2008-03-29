@@ -1,5 +1,14 @@
 Revision history for Perl extension VS::Chart.
 
+0.04  2008-03-29
+    - Added as_hex to VS::Chart::Color to make it easier to use from CSS.
+    - Don't croak if there's no data
+    - Added possibility to put a title centered over the chart using the attribute "title".
+    - Controlling the format of Y and X axis labels are now possible via [xy]_label_fmt attribute.
+    - Added baseline (baseline_color, baseline_dash) options to XY-graphs to render a 
+      horizontal baseline at a specific value
+    - Added missing module dependency for Module::Pluggable (cpan-testers by Slaven Rezic)
+      
 0.03  2008-03-17
     - Fixed version dependency for Cairo since apparently set_dash(cr, offset, ...) wasn't available
       in pre-1.040 versions. (cpan-testers by Taro Nishino)

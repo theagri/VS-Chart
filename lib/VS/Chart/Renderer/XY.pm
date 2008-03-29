@@ -23,6 +23,8 @@ my %Defaults = (
     x_label_decimals => 0,
 );
 
+sub type { "xy"; }
+
 sub set_defaults {
     my ($self, $chart) = @_;
     my @keys = $self->SUPER::set_defaults($chart);
@@ -50,6 +52,8 @@ sub render {
 
     $self->render_chart_background($chart, $surface, $xl, $yt, $width, $height);
     $self->render_axes($chart, $surface, $xl, $yt, $width, $height);    
+    $self->render_baseline($chart, $surface, $xl, $yt, $width, $height);    
+    $self->render_title($chart, $surface, $xl, $yt, $width, $height);    
 }
 
 # Calculate this by checking if show labels for y axis
@@ -61,24 +65,28 @@ sub x_offsets {
     
     my $cx = Cairo::Context->create($surface);
 
-    $xl += 10 if $chart->get("y_ticks");
-    $xl += 5 if !$xl && $chart->get("y_minor_ticks");
+    $xl += 10 if $chart->get("y_ticks") && $chart->rows;
+    $xl += 5 if !$xl && $chart->get("y_minor_ticks") && $chart->rows;
     
-    if ($chart->get("y_labels")) {
+    if ($chart->get("y_labels") && $chart->rows) {
         # Get max value        
         my $max = $chart->_max;    
         my $min = $chart->_min;
         
         my $decimals = abs($chart->get("y_label_decimals") || 0);
-        my $label_fmt = $decimals ? "%.${decimals}f" : "%.0f";
+        my $label_fmt = $chart->get("y_label_fmt") ? $chart->get("y_label_fmt") : $decimals ? "%.${decimals}f" : "%.0f";
 
         my $extents = $cx->text_extents(sprintf($label_fmt, $max));
-        $xl += $extents->{width} + 20;
+        my $pre_xl = $xl;
+        $xl += $extents->{width} + 10;
         $extents = $cx->text_extents(sprintf($label_fmt, $min));
-        $xl += $extents->{width} + 20 if $extents->{width} > $xl;
+        if ($extents->{width} + 10 > $xl) {
+            $xl = $pre_xl;
+            $xl += $extents->{width} + 10 
+        }
     }
 
-    if ($chart->get("x_labels")) {
+    if ($chart->get("x_labels") && $chart->rows) {
         # X labels
         my $iter = $chart->_row_iterator;
         my $max = $iter->max;
@@ -101,13 +109,19 @@ sub y_offsets {
     my $yt = 0;
     my $yb = 0;
 
-    $yb += 10 if $chart->get("x_ticks");
-    $yb += 5 if !$yb && $chart->get("x_minor_ticks");
+    $yb += 10 if $chart->get("x_ticks") && $chart->rows;
+    $yb += 5 if !$yb && $chart->get("x_minor_ticks") && $chart->rows;
+
+    my $cx = Cairo::Context->create($surface);
     
-    if ($chart->get("x_labels")) {
-        my $cx = Cairo::Context->create($surface);
+    if ($chart->get("x_labels") && $chart->rows) {
         my $extents = $cx->text_extents("0123456789.-");
-        $yb += sprintf("%.0f", $extents->{height}) + 20;
+        $yb += sprintf("%.0f", $extents->{height}) + 10;
+    }
+    
+    if ($chart->has("title")) {
+        my $extents = $cx->text_extents($chart->get("title"));
+        $yt += sprintf("%.0f", $extents->{height}) + 10;
     }
     
     return (10 + $yt, $yb + 10);
@@ -124,6 +138,47 @@ sub render_chart_background {
     $cx->fill;
 }
 
+sub render_title {
+    my ($self, $chart, $surface, $offset_x, $offset_y, $width, $height) = @_;
+    return unless $chart->has("title");
+    my $cx = Cairo::Context->create($surface);
+    my $color = VS::Chart::Color->get($chart->get("title_color"), "black");
+    
+    my $e = $cx->text_extents($chart->get("title"));
+    $cx->move_to(int(($width / 2) - ($e->{width} / 2)) + 0.5, 10 + $e->{height} + 0.5);
+    $cx->show_text($chart->get("title"));
+    $cx->stroke;
+    
+}
+
+sub render_baseline {
+    my ($self, $chart, $surface, $offset_x, $offset_y, $width, $height) = @_;
+    
+    return unless $chart->has("baseline");
+        
+    my $baseline_value = $chart->get("baseline") || 0;
+    return if $baseline_value < $chart->_min || $baseline_value > $chart->_max;
+
+    my $cx = Cairo::Context->create($surface);
+    $cx->translate($offset_x, $offset_y);
+
+    $cx->rectangle(1, 1, $width - 1.5, $height - 1.5);
+    $cx->clip();
+
+    $cx->set_line_width($chart->get("baseline_width") || 1);
+    
+    if ($chart->get("baseline_dash")) {
+        $cx->set_dash(0, $chart->get("baseline_dash"));
+    }
+    
+    VS::Chart::Color->get($chart->get("baseline_color"), "black")->set($cx, $surface, $width, $height);
+    
+    my $y_pos = int($height * (1 - $chart->_offset($baseline_value))) + 0.5;
+    $cx->move_to(0.5, $y_pos);
+    $cx->line_to(int($width) + 0.5, $y_pos);
+    $cx->stroke;
+}
+
 sub render_axes {
     my ($self, $chart, $surface, $offset_x, $offset_y, $width, $height) = @_;
     
@@ -134,155 +189,157 @@ sub render_axes {
     $cx->set_line_width(1);
     
     # Render y labels, y ticks, grid
-    my $y_span = $chart->_span;
-    my $y_steps = abs($chart->get("y_steps") || 1);
-    my $y_step_offset = $y_span / $y_steps;
-    my $v = $chart->_max;
-    my $y_decimals = abs($chart->get("y_label_decimals") || 0);
-    my $y_label_fmt = $y_decimals ? "%.${y_decimals}f" : "%.0f";
+    if ($chart->rows) {
+        my $y_span = $chart->_span;
+        my $y_steps = abs($chart->get("y_steps") || 1);
+        my $y_step_offset = $y_span / $y_steps;
+        my $v = $chart->_max;
+        my $y_decimals = abs($chart->get("y_label_decimals") || 0);
+        my $y_label_fmt = $chart->get("y_label_fmt") ? $chart->get("y_label_fmt") : $y_decimals ? "%.${y_decimals}f" : "%.0f";
 
-    my $pre_y_pos;
-    for (0..$y_steps) {
-        $v = $chart->_min if $_ == $y_steps;
-        
-        my $y_pos = (1 - $chart->_offset($v)) * $height;
-            
-        # Major ticks
-        my $label_offset = 10;
-        
-        if (($chart->get("y_minor_ticks") || $chart->get("y_minor_grid")) && defined $pre_y_pos) {
-            my $y_minor_ticks_count = abs($chart->get("y_minor_ticks_count") || 1);
-            my $yto = ($y_pos - $pre_y_pos)  / ($y_minor_ticks_count + 1);
-            if ($chart->get("y_minor_ticks")) {
-                VS::Chart::Color->get($chart->get("y_minor_ticks"), "minor_tick")->set($cx, $surface, $width, $height);
-                for (1..$y_minor_ticks_count) {
-                    my $y_minor_pos = int($y_pos - ($yto * $_)) + 0.5;
-                    $cx->move_to(0.5, $y_minor_pos);
-                    $cx->line_to(-4.5, $y_minor_pos);
-                }
-                $cx->stroke;
-            }
-                
-            if ($chart->get("y_minor_grid")) {
-                my $color = VS::Chart::Color->get($chart->get("y_minor_grid"), "minor_tick");
-                $color->set($cx, $surface, $width, $height);
-                for (1..$y_minor_ticks_count) {
-                    my $y_minor_pos = int($y_pos - ($yto * $_)) + 0.5;
-                    $cx->move_to(0.5, $y_minor_pos);
-                    $cx->line_to(int($width) + 0.5, $y_minor_pos);
-                }
-                $cx->stroke;
-            }
-        }
-
-        if ($chart->get("y_ticks")) {
-            VS::Chart::Color->get($chart->get("y_ticks"), "major_tick")->set($cx, $surface, $width, $height);
-            $cx->move_to(0.5, int($y_pos) + 0.5);
-            $cx->line_to(-9.5, int($y_pos) + 0.5);
-            $label_offset += 10;
-            $cx->stroke;
-        }
-                    
-        # Labels
-        if ($chart->get("y_labels") && ($chart->get("show_y_min") || $_ < $y_steps)) {
-            VS::Chart::Color->get($chart->get("y_labels"), "text")->set($cx, $surface, $width, $height);
-            my $t = sprintf($y_label_fmt, $v);
-            my $e = $cx->text_extents("${t}");
-            # Render Y Labels never outside graph
-            $cx->move_to(int(-($label_offset + $e->{width})) + 0.5, int($y_pos + $e->{height} / 2) + 0.5);
-            $cx->show_text("${t}");
-            $cx->stroke;
-        }
-        
-        $v -= $y_step_offset;
-        $pre_y_pos = $y_pos;
-    }
-    
-    my $x_decimals = $chart->get("x_label_decimals") || 0;
-    my $x_label_fmt = $x_decimals ? "%.${x_decimals}f" : "%.0f";
-    
-    my $x_iter = $chart->_row_iterator;
-    my $x_min = $x_iter->min;
-    my $x_max = $x_iter->max;
-    my $x_span = $x_max - $x_min;
-
-    $x_max = sprintf($x_label_fmt, $x_max) unless blessed $x_max;
-    $x_min = sprintf($x_label_fmt, $x_min) unless blessed $x_min;
-        
-    my $x_label_width = $cx->text_extents("${x_min}")->{width};
-    my $x_label_extents = $cx->text_extents("${x_max}");
-    $x_label_width = $x_label_extents->{width} if $x_label_extents->{width} > $x_label_width;
-    $x_label_width *= 2;
-    
-    my $x_steps = sprintf("%.0f", $width / $x_label_width);
-
-    my $pre_x_pos;
-    for (0..$x_steps) {
-        my $x_pos = int($width * ($_ / $x_steps)) + 0.5;
-
-        if (($chart->get("x_minor_ticks") || $chart->get("x_minor_grid")) && defined $pre_x_pos) {
-            my $x_minor_ticks_count = abs($chart->get("x_minor_ticks_count") || 1);
-            my $xto = ($x_pos - $pre_x_pos)  / ($x_minor_ticks_count + 1);
-                
-            if ($chart->get("x_minor_ticks")) {
-                VS::Chart::Color->get($chart->get("x_minor_ticks"), "minor_tick")->set($cx, $surface, $width, $height);
-                for (1..$x_minor_ticks_count) {
-                    $cx->move_to(int($x_pos - ($xto * $_)) + 0.5, $height + 0.5);
-                    $cx->line_to(int($x_pos - ($xto * $_)) + 0.5, $height + 5.5);
-                }
-                $cx->stroke;
-            }
-                
-            if ($chart->get("x_minor_grid")) {
-                my $color = VS::Chart::Color->get($chart->get("x_minor_grid"), "minor_tick");
-                $color->set($cx, $surface, $width, $height);
-                for (1..$x_minor_ticks_count) {
-                    $cx->move_to(int($x_pos - ($xto * $_)) + 0.5, 0.5);
-                    $cx->line_to(int($x_pos - ($xto * $_)) + 0.5, $height + 0.5);
-                }
-                $cx->stroke;
-            }
-        }
-
-        if ($chart->get("x_ticks")) {
-            VS::Chart::Color->get($chart->get("x_ticks"), "major_tick")->set($cx, $surface, $width, $height);
-            $cx->move_to($x_pos, int($height) + 0.5);
-            $cx->line_to($x_pos, int($height + 10) + 0.5);
-            $cx->stroke;
-        }
-
-        if ($chart->get("x_grid")) {
-            VS::Chart::Color->get($chart->get("x_grid"), "grid")->set($cx, $surface, $width, $height);
-            $cx->move_to($x_pos, 0.5);
-            $cx->line_to($x_pos, int($height) + 0.5);
-            $cx->stroke;
-        }
-            
-        if ($chart->get("x_labels")) {
-            VS::Chart::Color->get($chart->get("x_labels"), "text")->set($cx, $surface, $width, $height);
-            my $v_offset = $x_span * ($_ / $x_steps);
-            my $value = $x_min + $v_offset;
-            $value = sprintf($x_label_fmt, $value) unless blessed $value;
-            my $extents = $cx->text_extents("${value}");
-            $cx->move_to($x_pos - int($extents->{width} / 2), int($height + 20 + $extents->{height}) + 0.5);
-            $cx->show_text("${value}");
-            $cx->stroke();
-        }
-            
-        $pre_x_pos = $x_pos;
-    }    
-
-    if ($chart->get("y_grid")) {
-        VS::Chart::Color->get($chart->get("y_grid"), "grid")->set($cx, $surface, $width, $height);
-        $v = $chart->_max;
+        my $pre_y_pos;
         for (0..$y_steps) {
-            $v = $chart->_min if $_ == $y_steps;        
-            my $y_pos = (1 - $chart->_offset($v)) * $height;    
-            $cx->move_to(0.5, int($y_pos) + 0.5);
-            $cx->line_to(int($width) + 0.5, int($y_pos) + 0.5);
+            $v = $chart->_min if $_ == $y_steps;
+
+            my $y_pos = (1 - $chart->_offset($v)) * $height;
+
+            # Major ticks
+            my $label_offset = 10;
+
+            if (($chart->get("y_minor_ticks") || $chart->get("y_minor_grid")) && defined $pre_y_pos) {
+                my $y_minor_ticks_count = abs($chart->get("y_minor_ticks_count") || 1);
+                my $yto = ($y_pos - $pre_y_pos)  / ($y_minor_ticks_count + 1);
+                if ($chart->get("y_minor_ticks")) {
+                    VS::Chart::Color->get($chart->get("y_minor_ticks"), "minor_tick")->set($cx, $surface, $width, $height);
+                    for (1..$y_minor_ticks_count) {
+                        my $y_minor_pos = int($y_pos - ($yto * $_)) + 0.5;
+                        $cx->move_to(0.5, $y_minor_pos);
+                        $cx->line_to(-4.5, $y_minor_pos);
+                    }
+                    $cx->stroke;
+                }
+
+                if ($chart->get("y_minor_grid")) {
+                    my $color = VS::Chart::Color->get($chart->get("y_minor_grid"), "minor_tick");
+                    $color->set($cx, $surface, $width, $height);
+                    for (1..$y_minor_ticks_count) {
+                        my $y_minor_pos = int($y_pos - ($yto * $_)) + 0.5;
+                        $cx->move_to(0.5, $y_minor_pos);
+                        $cx->line_to(int($width) + 0.5, $y_minor_pos);
+                    }
+                    $cx->stroke;
+                }
+            }
+
+            if ($chart->get("y_ticks")) {
+                VS::Chart::Color->get($chart->get("y_ticks"), "major_tick")->set($cx, $surface, $width, $height);
+                $cx->move_to(0.5, int($y_pos) + 0.5);
+                $cx->line_to(-9.5, int($y_pos) + 0.5);
+                $label_offset += 10;
+                $cx->stroke;
+            }
+
+            # Labels
+            if ($chart->get("y_labels") && ($chart->get("show_y_min") || $_ < $y_steps)) {
+                VS::Chart::Color->get($chart->get("y_labels"), "text")->set($cx, $surface, $width, $height);
+                my $t = sprintf($y_label_fmt, $v);
+                my $e = $cx->text_extents("${t}");
+                # Render Y Labels never outside graph
+                $cx->move_to(int(-($label_offset + $e->{width})) + 0.5, int($y_pos + $e->{height} / 2) + 0.5);
+                $cx->show_text("${t}");
+                $cx->stroke;
+            }
+
             $v -= $y_step_offset;
+            $pre_y_pos = $y_pos;
         }
-        $cx->stroke;
+
+        my $x_decimals = $chart->get("x_label_decimals") || 0;
+        my $x_label_fmt = $chart->get("x_label_fmt") ? $chart->get("x_label_fmt") : $x_decimals ? "%.${x_decimals}f" : "%.0f";
+    
+        my $x_iter = $chart->_row_iterator;
+        my $x_min = $x_iter->min;
+        my $x_max = $x_iter->max;
+        my $x_span = $x_max - $x_min;
+
+        $x_max = sprintf($x_label_fmt, $x_max) unless blessed $x_max;
+        $x_min = sprintf($x_label_fmt, $x_min) unless blessed $x_min;
+        
+        my $x_label_width = $cx->text_extents("${x_min}")->{width};
+        my $x_label_extents = $cx->text_extents("${x_max}");
+        $x_label_width = $x_label_extents->{width} if $x_label_extents->{width} > $x_label_width;
+        $x_label_width *= 2;
+    
+        my $x_steps = sprintf("%.0f", $width / $x_label_width);
+
+        my $pre_x_pos;
+        for (0..$x_steps) {
+            my $x_pos = int($width * ($_ / $x_steps)) + 0.5;
+
+            if (($chart->get("x_minor_ticks") || $chart->get("x_minor_grid")) && defined $pre_x_pos) {
+                my $x_minor_ticks_count = abs($chart->get("x_minor_ticks_count") || 1);
+                my $xto = ($x_pos - $pre_x_pos)  / ($x_minor_ticks_count + 1);
+                
+                if ($chart->get("x_minor_ticks")) {
+                    VS::Chart::Color->get($chart->get("x_minor_ticks"), "minor_tick")->set($cx, $surface, $width, $height);
+                    for (1..$x_minor_ticks_count) {
+                        $cx->move_to(int($x_pos - ($xto * $_)) + 0.5, $height + 0.5);
+                        $cx->line_to(int($x_pos - ($xto * $_)) + 0.5, $height + 5.5);
+                    }
+                    $cx->stroke;
+                }
+                
+                if ($chart->get("x_minor_grid")) {
+                    my $color = VS::Chart::Color->get($chart->get("x_minor_grid"), "minor_tick");
+                    $color->set($cx, $surface, $width, $height);
+                    for (1..$x_minor_ticks_count) {
+                        $cx->move_to(int($x_pos - ($xto * $_)) + 0.5, 0.5);
+                        $cx->line_to(int($x_pos - ($xto * $_)) + 0.5, $height + 0.5);
+                    }
+                    $cx->stroke;
+                }
+            }
+
+            if ($chart->get("x_ticks")) {
+                VS::Chart::Color->get($chart->get("x_ticks"), "major_tick")->set($cx, $surface, $width, $height);
+                $cx->move_to($x_pos, int($height) + 0.5);
+                $cx->line_to($x_pos, int($height + 10) + 0.5);
+                $cx->stroke;
+            }
+
+            if ($chart->get("x_grid")) {
+                VS::Chart::Color->get($chart->get("x_grid"), "grid")->set($cx, $surface, $width, $height);
+                $cx->move_to($x_pos, 0.5);
+                $cx->line_to($x_pos, int($height) + 0.5);
+                $cx->stroke;
+            }
+            
+            if ($chart->get("x_labels")) {
+                VS::Chart::Color->get($chart->get("x_labels"), "text")->set($cx, $surface, $width, $height);
+                my $v_offset = $x_span * ($_ / $x_steps);
+                my $value = $x_min + $v_offset;
+                $value = sprintf($x_label_fmt, $value) unless blessed $value;
+                my $extents = $cx->text_extents("${value}");
+                $cx->move_to($x_pos - int($extents->{width} / 2), int($height + 20 + $extents->{height}) + 0.5);
+                $cx->show_text("${value}");
+                $cx->stroke();
+            }
+            
+            $pre_x_pos = $x_pos;
+        }    
+    
+        if ($chart->get("y_grid")) {
+            VS::Chart::Color->get($chart->get("y_grid"), "grid")->set($cx, $surface, $width, $height);
+            my $v = $chart->_max;
+            for (0..$y_steps) {
+                $v = $chart->_min if $_ == $y_steps;        
+                my $y_pos = (1 - $chart->_offset($v)) * $height;    
+                $cx->move_to(0.5, int($y_pos) + 0.5);
+                $cx->line_to(int($width) + 0.5, int($y_pos) + 0.5);
+                $v -= $y_step_offset;
+            }
+            $cx->stroke;
+        }
     }
     
     if ($chart->get("borders")) {
@@ -330,6 +387,27 @@ Controls if a chart_background should be drawn or not. Defaults to 1. Standard c
 
 =back
 
+=head2 BASELINE
+
+A baseline is a line rendered at a specific value from left to right in the chart to 
+indicate a comparision value, for example 100%.
+
+=over 4
+
+=item baseline ( VALUE )
+
+The value at where to draw the baseline. Baseline will only be drawn if this option is set.
+
+=item baseline_color (COLOR)
+
+Controls the color that the baseline should be drawn with. Standard color is B<black>.
+
+=item baseline_dash ( DASH )
+
+Controls if the baseline should be dashed. Standard is a solid line.
+
+=back
+
 =head2 BORDERS
 
 =over 4
@@ -351,6 +429,11 @@ Controls if the X axis should be drawn. Defaults to 1. Standard color is B<axis>
 =item x_grid ( 0 | 1 | COLOR ). 
 
 Controls if a vertical grid should be drawn. Defaults to 1. Standard color is B<grid>.
+
+=item x_label_fmt ( FORMAT )
+
+Controls how X axis labels will be formated using printf syntax. Default is C<%.${x_label_decimals}f> for 
+numeric values and ISO 8601 for dates.
 
 =item x_label_decimals ( NUM )
 
@@ -408,6 +491,11 @@ Controls if the Y axis should be drawn. Defaults to 1. Standard color is B<axis>
 
 Controls if labels on the X axis should be drawn. Defaults to 1. Standard color is B<text>.
 
+=item y_label_fmt ( FORMAT )
+
+Controls how Y axis labels will be formated using printf syntax. Default is C<%.${y_label_decimals}f> for 
+numeric values.
+
 =item y_label_decimals ( NUM )
 
 Controls how many decimals should be shown for Y labels. Defaults to 1.
@@ -423,6 +511,16 @@ Controls if minor ticks (between lables / major ticks ) should be drawn. Default
 =item y_minor_ticks_count ( NUM )
 
 Controls the number of minor ticks to show between major ticks/grid lines. 
+
+=back
+
+=head2 TITLE
+
+=over 4
+
+=item title
+
+Sets the title that will be displayed centered above the chart.
 
 =back
 
@@ -451,6 +549,14 @@ minus any offsets.
 
 Renders the axes, labels and ticks.
 
+=item render_baseline ( CHART, SURFACE, LEFT, TOP, WIDTH, HEIGHT )
+
+Renders the baseline.
+
+=item render_title ( CHART, SURFACE, LEFT, TOP, WIDTH, HEIGHT )
+
+Renders the title.
+
 =item x_offsets ( CHART, SURFACE )
 
 Returns left and right offsets for the chart.
@@ -458,6 +564,10 @@ Returns left and right offsets for the chart.
 =item y_offsets ( CHART, SURFACE )
 
 Returns the top and bottom offsets for the chart.
+
+=item type
+
+Returns the type of chart that will be used by C<VS::Chart/render> to determine what renderer to use,
 
 =back
 

@@ -29,22 +29,22 @@ my $surface = Cairo::ImageSurface->create('argb32', 400, 400);
 
     $chart->set(y_ticks => 1);
     ($xl, $xr) = $rend->x_offsets($chart, $surface);
-    is($xl, 20); 
+    is($xl, 10); 
     is($xr, 10);
 
     $chart->set(y_minor_ticks => 1, y_ticks => 0);
     ($xl, $xr) = $rend->x_offsets($chart, $surface);
-    is($xl, 15); 
+    is($xl, 10); 
     is($xr, 10);
 
     $chart->set(y_labels => 1, y_minor_ticks => 0);
+    $chart->add(Date::Simple->new("2000-01-01"), 1);
+    $chart->add(Date::Simple->new("2001-01-01"), 1);
     ($xl, $xr) = $rend->x_offsets($chart, $surface);
     ok($xl > 10); 
     is($xr, 10);
 
     $chart->set(y_labels => 0, x_labels => 1);
-    $chart->add(Date::Simple->new("2000-01-01"), 1);
-    $chart->add(Date::Simple->new("2001-01-01"), 1);
     ($xl, $xr) = $rend->x_offsets($chart, $surface);
     ok($xl > 10); 
     ok($xl > 10);
