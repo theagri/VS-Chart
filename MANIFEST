@@ -3,6 +3,7 @@ LICENSE
 MANIFEST
 Makefile.PL
 README
+VS-Chart-0.04.tar.gz
 examples/lines/basic.pl
 examples/lines/percent.pl
 examples/xy/title.pl
@@ -22,6 +23,7 @@ t/05-row-iterator.t
 t/06-xy.t
 t/07-line.t
 t/08-color.t
+t/09-png-stream.t
 t/pod-coverage.t
 t/pod.t
 META.yml                                 Module meta-data (added by MakeMaker)

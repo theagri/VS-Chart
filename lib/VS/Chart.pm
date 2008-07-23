@@ -10,7 +10,7 @@ use Scalar::Util qw(refaddr);
 use VS::Chart::Dataset;
 use VS::Chart::RowIterator;
 
-our $VERSION = "0.04";
+our $VERSION = "0.05";
 
 my %Datasets;
 my %NextRow;
@@ -274,8 +274,14 @@ sub _offsets {
 
     my %Save = (
         'png' => sub {
-            my ($surface, $path) = @_;
-            $surface->write_to_png($path);
+            my ($surface, $target) = @_;
+            
+            if (ref $target eq "CODE") {
+                $surface->write_to_png_stream($target)
+            }
+            else {
+                $surface->write_to_png($target);
+            }
         },
         'svg' => sub {
         },
@@ -405,11 +411,14 @@ Check if an attribute exists.
 Adds the data in I<@ROW> to the chart. If the first element is a I<Date::Simple> object the first column will be 
 marked as the index column provider and sorted accordingly when rendered.
 
-=item render ( type => TYPE, to => PATH, [ as => FORMAT ] )
+=item render ( type => TYPE, to => PATH | CODE, [ as => FORMAT ] )
 
 Renders the chart using the renderer specified by I<TYPE> and saves the 
 output as I<PATH>. By default the I<FORMAT> is B<png> but B<pdf> or B<svg> may
 be used instead.
+
+If the format is B<png> it's possible to pass a CODE reference instead of a path in I<to>. This will be called 
+with the reference itself as the first argument and data as second. It may be called several times during rendering.
 
 =item dataset ( COLUMN )
 

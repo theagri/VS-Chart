@@ -1,5 +1,9 @@
 Revision history for Perl extension VS::Chart.
 
+0.05  2008-07-23
+    - Added support for passing a CODE reference in 'to' to render so one can render 
+      directly to a scalar or filehandle when rendering PNG charts. 
+      
 0.04  2008-03-29
     - Added as_hex to VS::Chart::Color to make it easier to use from CSS.
     - Don't croak if there's no data

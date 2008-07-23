@@ -55,15 +55,23 @@ INTERFACE
         *Date::Simple* object the first column will be marked as the index
         column provider and sorted accordingly when rendered.
 
-    render ( type => TYPE, to => PATH, [ as => FORMAT ] )
+    render ( type => TYPE, to => PATH | CODE, [ as => FORMAT ] )
         Renders the chart using the renderer specified by *TYPE* and saves
         the output as *PATH*. By default the *FORMAT* is png but pdf or svg
         may be used instead.
+
+        If the format is png it's possible to pass a CODE reference instead
+        of a path in *to*. This will be called with the reference itself as
+        the first argument and data as second. It may be called several
+        times during rendering.
 
     dataset ( COLUMN )
         Returns the "VS::Chart::Dataset"-instance representing the data for
         the given column. Return undef if no such column has been added yet
         via add.
+
+    rows
+        Returns the number of rows of data added to the chart.
 
 BUGS AND LIMITATIONS
     Please report any bugs or feature requests to
