@@ -1,6 +1,10 @@
 Revision history for Perl extension VS::Chart.
 
-0.05  2008-07-23
+0.06  2008-08-03
+    - Fixed MANIFEST to not include the 0.04 dist
+    - Make sure v_offset is an integer when dealing with Date::Simple on the X axis [rt.cpan.org #38059]
+    
+0.05  2008-07-22
     - Added support for passing a CODE reference in 'to' to render so one can render 
       directly to a scalar or filehandle when rendering PNG charts. 
       

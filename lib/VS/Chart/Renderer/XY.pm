@@ -317,7 +317,8 @@ sub render_axes {
             if ($chart->get("x_labels")) {
                 VS::Chart::Color->get($chart->get("x_labels"), "text")->set($cx, $surface, $width, $height);
                 my $v_offset = $x_span * ($_ / $x_steps);
-                my $value = $x_min + $v_offset;
+                $v_offset = int($v_offset) if blessed $x_min;
+                my $value = $x_min  + $v_offset;
                 $value = sprintf($x_label_fmt, $value) unless blessed $value;
                 my $extents = $cx->text_extents("${value}");
                 $cx->move_to($x_pos - int($extents->{width} / 2), int($height + 20 + $extents->{height}) + 0.5);
