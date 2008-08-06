@@ -43,6 +43,22 @@ sub render_background {
     $cx->paint;
 }
 
+sub set_font {
+    my ($self, $cx, $chart, $section) = @_;
+    
+    my $face = $chart->get("${section}_font_face");
+    if ($face) {
+        my $slant = $chart->get("${section}_font_slant") || "normal";
+        my $weight = $chart->get("${section}_font_weight") || "normal";
+        $cx->select_font_face($face, $slant, $weight);
+    }
+    
+    my $size = $chart->get("${section}_font_size");
+    if ($size) {
+        $cx->set_font_size($size);
+    }
+}
+
 1;
 __END__
 
@@ -84,6 +100,11 @@ Renders the chart to the Cairo surface.
 =item render_background ( CHART, SURFACE )
 
 Renders the chart background if one is declared.
+
+=item set_font ( CHART, SURFACE, SECTION)
+
+Sets the current font face and size to what is defined by the settings for I<SECTION>. For example, B<labels_font_face>, 
+B<labels_font_size>, B<labels_font_slant> and B<labels_font_weight>.
 
 =back
 

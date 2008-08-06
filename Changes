@@ -1,5 +1,9 @@
 Revision history for Perl extension VS::Chart.
 
+0.07  2008-08-06
+    - Title is now rendered centered instead of slightly to the left
+    - Support for setting fonts on labels and title via (labels|title)_font_(face|size|slant|weight)
+    
 0.06  2008-08-03
     - Fixed MANIFEST to not include the 0.04 dist
     - Make sure v_offset is an integer when dealing with Date::Simple on the X axis [rt.cpan.org #38059]

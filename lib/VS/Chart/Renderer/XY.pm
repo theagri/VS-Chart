@@ -53,7 +53,7 @@ sub render {
     $self->render_chart_background($chart, $surface, $xl, $yt, $width, $height);
     $self->render_axes($chart, $surface, $xl, $yt, $width, $height);    
     $self->render_baseline($chart, $surface, $xl, $yt, $width, $height);    
-    $self->render_title($chart, $surface, $xl, $yt, $width, $height);    
+    $self->render_title($chart, $surface, $xl, $yt, $chart->get("width"), $chart->get("height"));    
 }
 
 # Calculate this by checking if show labels for y axis
@@ -64,7 +64,8 @@ sub x_offsets {
     my $xr = 0;
     
     my $cx = Cairo::Context->create($surface);
-
+    $self->set_font($cx, $chart, "labels");
+    
     $xl += 10 if $chart->get("y_ticks") && $chart->rows;
     $xl += 5 if !$xl && $chart->get("y_minor_ticks") && $chart->rows;
     
@@ -113,6 +114,7 @@ sub y_offsets {
     $yb += 5 if !$yb && $chart->get("x_minor_ticks") && $chart->rows;
 
     my $cx = Cairo::Context->create($surface);
+    $self->set_font($cx, $chart, "labels");
     
     if ($chart->get("x_labels") && $chart->rows) {
         my $extents = $cx->text_extents("0123456789.-");
@@ -120,6 +122,7 @@ sub y_offsets {
     }
     
     if ($chart->has("title")) {
+        $self->set_font($cx, $chart, "title");
         my $extents = $cx->text_extents($chart->get("title"));
         $yt += sprintf("%.0f", $extents->{height}) + 10;
     }
@@ -142,9 +145,13 @@ sub render_title {
     my ($self, $chart, $surface, $offset_x, $offset_y, $width, $height) = @_;
     return unless $chart->has("title");
     my $cx = Cairo::Context->create($surface);
+    $self->set_font($cx, $chart, "title");
+    
     my $color = VS::Chart::Color->get($chart->get("title_color"), "black");
     
     my $e = $cx->text_extents($chart->get("title"));
+    print STDERR "Width: ", $width, "\n";
+    print STDERR "Text width: ", $e->{width}, "\n";
     $cx->move_to(int(($width / 2) - ($e->{width} / 2)) + 0.5, 10 + $e->{height} + 0.5);
     $cx->show_text($chart->get("title"));
     $cx->stroke;
@@ -183,6 +190,7 @@ sub render_axes {
     my ($self, $chart, $surface, $offset_x, $offset_y, $width, $height) = @_;
     
     my $cx = Cairo::Context->create($surface);
+    $self->set_font($cx, $chart, "labels");
 
     $cx->translate($offset_x, $offset_y);
     
@@ -419,6 +427,28 @@ Controls if a 1 point border around the chart should be drawn or not. Defaults t
 
 =back
 
+=head2 COMMON ATTRIBUTES FOR BOTH AXES
+
+=over 4
+
+=item labels_font_face 
+
+Sets the font-face for the labels. Values understood are normally B<serif>, B<sans-serif> and B<monospace> but others might work.
+
+=item labels_font_size
+
+The size of the text to render in points.
+
+=item labels_font_slant
+
+If the font is in italics or not. Valid values are B<normal>, B<italic>, B<oblique>. Defaults to B<normal> which means no italic.
+
+=item labels_font_weight
+
+If the font is in bold or not. Valid values are B<normal>, B<bold>. Defaults to B<normal> which means not bold.
+
+=back
+
 =head2 X AXIS
 
 =over 4
@@ -522,6 +552,22 @@ Controls the number of minor ticks to show between major ticks/grid lines.
 =item title
 
 Sets the title that will be displayed centered above the chart.
+
+=item title_font_face 
+
+Sets the font-face for the title. Values understood are normally B<serif>, B<sans-serif> and B<monospace> but others might work.
+
+=item title_font_size
+
+The size of the text to render in points.
+
+=item title_font_slant
+
+If the font is in italics or not. Valid values are B<normal>, B<italic>, B<oblique>. Defaults to B<normal> which means no italic.
+
+=item title_font_weight
+
+If the font is in bold or not. Valid values are B<normal>, B<bold>. Defaults to B<normal> which means not bold.
 
 =back
 
