@@ -24,25 +24,25 @@ my $surface = Cairo::ImageSurface->create('argb32', 400, 400);
 {
     my $chart = VS::Chart->new(no_defaults => 1);
     my ($xl, $xr) = $rend->x_offsets($chart, $surface);
-    is($xl, 10); 
-    is($xr, 10);
+    is($xl, -1); 
+    is($xr, 0.5);
 
     $chart->set(y_ticks => 1);
     ($xl, $xr) = $rend->x_offsets($chart, $surface);
-    is($xl, 10); 
-    is($xr, 10);
+    is($xl, -1); 
+    is($xr, 0.5);
 
     $chart->set(y_minor_ticks => 1, y_ticks => 0);
     ($xl, $xr) = $rend->x_offsets($chart, $surface);
-    is($xl, 10); 
-    is($xr, 10);
+    is($xl, -1); 
+    is($xr, 0.5);
 
     $chart->set(y_labels => 1, y_minor_ticks => 0);
     $chart->add(Date::Simple->new("2000-01-01"), 1);
     $chart->add(Date::Simple->new("2001-01-01"), 1);
     ($xl, $xr) = $rend->x_offsets($chart, $surface);
     ok($xl > 10); 
-    is($xr, 10);
+    is($xr, 0.5);
 
     $chart->set(y_labels => 0, x_labels => 1);
     ($xl, $xr) = $rend->x_offsets($chart, $surface);
@@ -54,6 +54,6 @@ my $surface = Cairo::ImageSurface->create('argb32', 400, 400);
 {
     my $chart = VS::Chart->new(x_labels => 0);
     my ($yt, $yb) = $rend->y_offsets($chart, $surface);
-    is($yt, 10);
-    is($yb, 10);
+    is($yt, -1);
+    is($yb, 0.5);
 }

@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Scalar::Util qw(blessed);
+use POSIX qw(ceil);
 
 use VS::Chart::Color;
 
@@ -62,6 +63,7 @@ sub x_offsets {
 
     my $xl = 0;
     my $xr = 0;
+    my $padding = $chart->get("padding") || 0;
     
     my $cx = Cairo::Context->create($surface);
     $self->set_font($cx, $chart, "labels");
@@ -83,7 +85,7 @@ sub x_offsets {
         $extents = $cx->text_extents(sprintf($label_fmt, $min));
         if ($extents->{width} + 10 > $xl) {
             $xl = $pre_xl;
-            $xl += $extents->{width} + 10 
+            $xl += $extents->{width} + 10;
         }
     }
 
@@ -94,13 +96,13 @@ sub x_offsets {
         my $min = $iter->min;
         
         my $extents = $cx->text_extents("${min}");
-        $xl = $extents->{width} / 2 if $extents->{width} / 2 > $xl;
+        $xl = ceil($extents->{width} / 2) if $extents->{width} / 2 > $xl;
         
         $extents = $cx->text_extents("${max}");
-        $xr = $extents->{width} / 2;
+        $xr = ceil($extents->{width} / 2);
     }
         
-    return (10 + $xl, 10 + $xr);
+    return ($xl - 1 + $padding, $xr + 0.5 + $padding);
 }
 
 # Calculate this by checking if show labels for y axis
@@ -109,25 +111,41 @@ sub y_offsets {
     
     my $yt = 0;
     my $yb = 0;
+    my $padding = $chart->get("padding") || 0;
 
     $yb += 10 if $chart->get("x_ticks") && $chart->rows;
     $yb += 5 if !$yb && $chart->get("x_minor_ticks") && $chart->rows;
 
     my $cx = Cairo::Context->create($surface);
     $self->set_font($cx, $chart, "labels");
-    
-    if ($chart->get("x_labels") && $chart->rows) {
-        my $extents = $cx->text_extents("0123456789.-");
-        $yb += sprintf("%.0f", $extents->{height}) + 10;
-    }
-    
+
     if ($chart->has("title")) {
         $self->set_font($cx, $chart, "title");
         my $extents = $cx->text_extents($chart->get("title"));
-        $yt += sprintf("%.0f", $extents->{height}) + 10;
+        $yt += ceil(sprintf("%.0f", $extents->{height})) + 10;
+    }
+
+    if ($chart->get("y_labels")) {
+        # Get max value        
+        my $max = $chart->_max;    
+        my $min = $chart->_min;
+        
+        my $decimals = abs($chart->get("y_label_decimals") || 0);
+        my $label_fmt = $chart->get("y_label_fmt") ? $chart->get("y_label_fmt") : $decimals ? "%.${decimals}f" : "%.0f";
+
+        my $extents = $cx->text_extents(sprintf($label_fmt, $max));
+        $yt = ceil($extents->{height} / 2) if $extents->{height} / 2 > $yt;
+        
+        $extents = $cx->text_extents(sprintf($label_fmt, $min));
+        $yb = ceil($extents->{height} / 2) if $yb == 0;
     }
     
-    return (10 + $yt, $yb + 10);
+    if ($chart->get("x_labels") && $chart->rows) {
+        my $extents = $cx->text_extents("0123456789.-");
+        $yb += ceil(sprintf("%.0f", $extents->{height}) + 10);
+    }
+        
+    return ($yt - 1 + $padding, $yb + 0.5 + $padding);
 }
 
 sub render_chart_background {
@@ -150,8 +168,6 @@ sub render_title {
     my $color = VS::Chart::Color->get($chart->get("title_color"), "black");
     
     my $e = $cx->text_extents($chart->get("title"));
-    print STDERR "Width: ", $width, "\n";
-    print STDERR "Text width: ", $e->{width}, "\n";
     $cx->move_to(int(($width / 2) - ($e->{width} / 2)) + 0.5, 10 + $e->{height} + 0.5);
     $cx->show_text($chart->get("title"));
     $cx->stroke;
@@ -417,13 +433,17 @@ Controls if the baseline should be dashed. Standard is a solid line.
 
 =back
 
-=head2 BORDERS
+=head2 BORDERS & PADDING
 
 =over 4
 
 =item borders ( 0 | 1 | COLOR )
 
 Controls if a 1 point border around the chart should be drawn or not. Defaults to 0. Standard color is B<black>.
+
+=item padding ( SIZE )
+
+Controls if there should be a padding around what's rendered. Defaults to 0
 
 =back
 

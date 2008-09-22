@@ -1,5 +1,9 @@
 Revision history for Perl extension VS::Chart.
 
+0.08  2008-09-22
+    - Removed 5-pixel-ish margin around rendered contents. If this is desired now set option C<margin> to 
+      the size of the margin.
+      
 0.07  2008-08-06
     - Title is now rendered centered instead of slightly to the left
     - Support for setting fonts on labels and title via (labels|title)_font_(face|size|slant|weight)
